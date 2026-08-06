@@ -162,9 +162,9 @@ function TransactionsContent() {
   const saldo = totalReceitas - totalDespesas;
 
   const categories = useMemo(() => {
-    const set = new Set(tableTransactions.map(tx => tx.category).filter(Boolean));
+    const set = new Set(allTransactions.map(tx => tx.category).filter(Boolean));
     return Array.from(set).sort();
-  }, [tableTransactions]);
+  }, [allTransactions]);
 
   const filteredTransactions = useMemo(() => {
     return tableTransactions.filter(tx => {
