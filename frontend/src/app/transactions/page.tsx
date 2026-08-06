@@ -129,9 +129,17 @@ function TransactionsContent() {
     return new Date(0);
   }, [period]);
 
+  const periodEnd = useMemo(() => {
+    if (period === 'all') return null;
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  }, [period]);
+
   const transactions = useMemo(() =>
-    allTransactions.filter(tx => tx.created_at >= periodStart),
-    [allTransactions, periodStart]
+    allTransactions.filter(tx =>
+      tx.created_at >= periodStart && (periodEnd === null || tx.created_at < periodEnd)
+    ),
+    [allTransactions, periodStart, periodEnd]
   );
 
   const totalReceitas = useMemo(() =>
