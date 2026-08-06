@@ -19,6 +19,9 @@ async def send_message(chat_id: int, text: str) -> None:
 
 
 async def register_webhook() -> None:
+    if not config.TELEGRAM_WEBHOOK_URL:
+        logger.warning("TELEGRAM_WEBHOOK_URL not set — skipping webhook registration")
+        return
     response = await _client.post(
         f"{_BASE}/setWebhook",
         json={
