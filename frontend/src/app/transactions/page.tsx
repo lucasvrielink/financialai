@@ -135,18 +135,13 @@ function TransactionsContent() {
     return new Date(now.getFullYear(), now.getMonth() + 1, 1);
   }, [period]);
 
-  // KPIs and charts: bounded by period (no future installments counted)
+  // Period-bounded set used everywhere. When period is "all", periodEnd is
+  // null (no upper bound), so future installments only appear under "Tudo".
   const transactions = useMemo(() =>
     allTransactions.filter(tx =>
       tx.created_at >= periodStart && (periodEnd === null || tx.created_at < periodEnd)
     ),
     [allTransactions, periodStart, periodEnd]
-  );
-
-  // Table: includes future installments (no upper bound)
-  const tableTransactions = useMemo(() =>
-    allTransactions.filter(tx => tx.created_at >= periodStart),
-    [allTransactions, periodStart]
   );
 
   const totalReceitas = useMemo(() =>
@@ -167,7 +162,7 @@ function TransactionsContent() {
   }, [allTransactions]);
 
   const filteredTransactions = useMemo(() => {
-    return tableTransactions.filter(tx => {
+    return transactions.filter(tx => {
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
       if (categoryFilter && tx.category !== categoryFilter) return false;
       if (search) {
@@ -176,7 +171,7 @@ function TransactionsContent() {
       }
       return true;
     });
-  }, [tableTransactions, typeFilter, categoryFilter, search]);
+  }, [transactions, typeFilter, categoryFilter, search]);
 
   const categoryData = useMemo(() => {
     const map: Record<string, number> = {};
@@ -257,9 +252,9 @@ function TransactionsContent() {
               <div className="table-section__header">
                 <span className="table-section__title">
                   Transações
-                  {filteredTransactions.length !== tableTransactions.length && (
+                  {filteredTransactions.length !== transactions.length && (
                     <span className="table-section__count">
-                      {' '}· {filteredTransactions.length} de {tableTransactions.length}
+                      {' '}· {filteredTransactions.length} de {transactions.length}
                     </span>
                   )}
                 </span>
@@ -276,7 +271,7 @@ function TransactionsContent() {
 
               {filteredTransactions.length === 0 ? (
                 <p className="empty-state">
-                  {tableTransactions.length === 0
+                  {transactions.length === 0
                     ? 'Nenhuma transação neste período.'
                     : 'Nenhuma transação encontrada com estes filtros.'}
                 </p>
