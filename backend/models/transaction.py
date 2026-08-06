@@ -37,6 +37,10 @@ class ParsedTransaction(BaseModel):
     installments: int = 1
 
 
+class ParsedTransactionList(BaseModel):
+    transactions: list[ParsedTransaction]
+
+
 class Transaction(BaseModel):
     user_id: str
     type: Literal["despesa", "receita"]

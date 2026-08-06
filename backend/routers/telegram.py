@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, status
 
 import config
 from models.transaction import TelegramUpdate, ParsedTransaction
-from services.gemini import GeminiUnavailableError, parse_transaction
+from services.gemini import GeminiUnavailableError, parse_transactions
 from services.firestore import FirestoreWriteError, get_firebase_uid, save_transaction
 from services import telegram as tg
 
@@ -25,11 +25,18 @@ _REPLY_GEMINI_ERROR = "⚠️ Não consegui processar sua mensagem agora. Tente 
 _REPLY_FIRESTORE_ERROR = "⚠️ Erro ao salvar a transação. Tente novamente."
 
 
-def _build_confirmation(parsed: ParsedTransaction) -> str:
+def _format_one(parsed: ParsedTransaction) -> str:
     tipo = "Despesa" if parsed.type == "despesa" else "Receita"
-    if parsed.type == "despesa" and parsed.installments > 1:
-        return f"✅ {tipo} R${parsed.amount}x{parsed.installments} — {parsed.category}"
-    return f"✅ {tipo} R${parsed.amount} — {parsed.category}"
+    if parsed.installments > 1:
+        return f"• {tipo} R${parsed.amount}x{parsed.installments} — {parsed.category}"
+    return f"• {tipo} R${parsed.amount} — {parsed.category}"
+
+
+def _build_confirmation(items: list[ParsedTransaction]) -> str:
+    if len(items) == 1:
+        return "✅ " + _format_one(items[0]).lstrip("• ")
+    lines = "\n".join(_format_one(p) for p in items)
+    return f"✅ {len(items)} transações registradas:\n{lines}"
 
 
 async def _safe_send(chat_id: int, text: str) -> None:
@@ -50,13 +57,13 @@ async def _process_update(update: TelegramUpdate) -> None:
         return
 
     try:
-        parsed = await parse_transaction(text)
+        items = await parse_transactions(text)
     except GeminiUnavailableError:
         logger.exception("Gemini unavailable")
         await _safe_send(chat_id, _REPLY_GEMINI_ERROR)
         return
 
-    if parsed is None:
+    if not items:
         await _safe_send(chat_id, _REPLY_HELP)
         return
 
@@ -66,13 +73,14 @@ async def _process_update(update: TelegramUpdate) -> None:
         return
 
     try:
-        await save_transaction(parsed, text, user_id, firebase_uid)
+        for parsed in items:
+            await save_transaction(parsed, text, user_id, firebase_uid)
     except FirestoreWriteError:
         logger.exception("Firestore write failed")
         await _safe_send(chat_id, _REPLY_FIRESTORE_ERROR)
         return
 
-    await _safe_send(chat_id, _build_confirmation(parsed))
+    await _safe_send(chat_id, _build_confirmation(items))
 
 
 @router.post("/telegram")
