@@ -19,7 +19,3 @@ FIREBASE_PROJECT_ID = _require("FIREBASE_PROJECT_ID")
 FIREBASE_CLIENT_EMAIL = _require("FIREBASE_CLIENT_EMAIL")
 FIREBASE_PRIVATE_KEY = _require("FIREBASE_PRIVATE_KEY").replace("\\n", "\n")
 
-try:
-    TELEGRAM_OWNER_ID = int(_require("TELEGRAM_OWNER_ID"))
-except ValueError:
-    raise RuntimeError("TELEGRAM_OWNER_ID must be a numeric integer")

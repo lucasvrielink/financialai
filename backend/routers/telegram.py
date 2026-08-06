@@ -85,7 +85,7 @@ async def telegram_webhook(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     msg = update.message
-    if msg is None or msg.from_.id != config.TELEGRAM_OWNER_ID:
+    if msg is None:
         return {"ok": True}
 
     background_tasks.add_task(_process_update, update)
