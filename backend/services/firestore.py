@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
 import firebase_admin
@@ -30,10 +31,20 @@ def _init_firebase() -> None:
 _init_firebase()
 
 
-def _write(data: dict) -> str:
+def _write_batch(docs: list[dict]) -> None:
     db = firestore.client()
-    _, doc_ref = db.collection("transactions").add(data)
-    return doc_ref.id
+    batch = db.batch()
+    for data in docs:
+        ref = db.collection("transactions").document()
+        batch.set(ref, data)
+    batch.commit()
+
+
+def _make_installment_date(base: datetime, offset_months: int) -> datetime:
+    month = base.month - 1 + offset_months
+    year = base.year + month // 12
+    month = month % 12 + 1
+    return base.replace(year=year, month=month, day=1)
 
 
 def _query_firebase_uid(telegram_user_id: str) -> Optional[str]:
@@ -51,21 +62,29 @@ async def save_transaction(
     raw_message: str,
     telegram_user_id: str,
     firebase_uid: str,
-) -> str:
-    data = {
+) -> None:
+    now = datetime.now(timezone.utc)
+    n = parsed.installments or 1
+
+    base = {
         "user_id": firebase_uid,
         "telegram_user_id": telegram_user_id,
         "type": parsed.type,
         "amount": parsed.amount,
         "category": parsed.category,
         "description": parsed.description,
-        "installments": parsed.installments,
+        "installments": n,
         "raw_message": raw_message,
-        "created_at": firestore.SERVER_TIMESTAMP,
     }
 
+    docs = []
+    for i in range(n):
+        doc = dict(base)
+        doc["installment_index"] = i + 1
+        doc["created_at"] = _make_installment_date(now, i)
+        docs.append(doc)
+
     try:
-        doc_id = await asyncio.to_thread(_write, data)
-        return doc_id
+        await asyncio.to_thread(_write_batch, docs)
     except Exception as e:
         raise FirestoreWriteError("Firestore write failed") from e
