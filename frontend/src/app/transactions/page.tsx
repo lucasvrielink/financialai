@@ -39,7 +39,7 @@ function TransactionsContent() {
     if (authState.status !== 'authenticated') return;
     fetchTransactions(authState.user.uid);
     const id = setInterval(() => {
-      fetchTransactions(authState.user.uid);
+      fetchTransactions(authState.user.uid, true);
     }, 30000);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,17 +190,21 @@ function TransactionsContent() {
 
   const monthlyData = useMemo(() => {
     const map: Record<string, { receitas: number; despesas: number }> = {};
-    allTransactions.forEach(tx => {
+    transactions.forEach(tx => {
       const d = tx.created_at;
-      const key = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`;
+      // Sortable key (YYYY-MM); display label derived below.
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!map[key]) map[key] = { receitas: 0, despesas: 0 };
       if (tx.type === 'receita') map[key].receitas += tx.amount;
       else map[key].despesas += tx.amount;
     });
     return Object.entries(map)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, v]) => ({ month, ...v }));
-  }, [allTransactions]);
+      .map(([key, v]) => {
+        const [year, month] = key.split('-');
+        return { month: `${month}/${year.slice(2)}`, ...v };
+      });
+  }, [transactions]);
 
   return (
     <>
