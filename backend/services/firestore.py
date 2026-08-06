@@ -44,7 +44,7 @@ def _make_installment_date(base: datetime, offset_months: int) -> datetime:
     month = base.month - 1 + offset_months
     year = base.year + month // 12
     month = month % 12 + 1
-    return base.replace(year=year, month=month, day=1)
+    return datetime(year, month, 1, 12, 0, 0, tzinfo=timezone.utc)
 
 
 def _query_firebase_uid(telegram_user_id: str) -> Optional[str]:
